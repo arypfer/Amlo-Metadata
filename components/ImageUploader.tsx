@@ -42,39 +42,37 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected, compact 
     }
   };
 
+  // COMPACT MODE
   if (compact) {
     return (
       <label
-        htmlFor="image-upload"
+        htmlFor="studio-upload"
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
         className={`
-          flex items-center justify-center gap-3 w-full py-4 px-6
-          rounded-2xl cursor-pointer transition-smooth
+          flex items-center justify-center w-full py-8 
+          rounded-2xl cursor-pointer transition-all duration-300
+          border border-dashed
           ${dragActive
-            ? 'bg-red-500/20 border-red-500/50'
-            : 'glass hover:bg-white/10'
+            ? 'bg-purple-500/10 border-purple-500/50 scale-[1.01]'
+            : 'bg-zinc-900/50 border-white/5 hover:bg-zinc-800/50 hover:border-white/10'
           }
-          border border-dashed border-white/20
           group
         `}
       >
-        <div className={`
-          w-10 h-10 rounded-xl flex items-center justify-center transition-smooth
-          ${dragActive ? 'bg-red-500 text-white' : 'bg-white/10 text-slate-400 group-hover:bg-red-500/20 group-hover:text-red-400'}
-        `}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        </div>
-        <div className="text-left">
-          <p className="text-sm font-medium text-white">Add more photos</p>
-          <p className="text-xs text-slate-500 hidden sm:block">or drag and drop</p>
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-xl transition-colors ${dragActive ? 'bg-purple-500/20 text-purple-400' : 'bg-zinc-800 text-zinc-400 group-hover:text-zinc-300'}`}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          </div>
+          <div>
+            <p className={`text-sm font-medium transition-colors ${dragActive ? 'text-purple-400' : 'text-zinc-300 group-hover:text-white'}`}>Upload New Photos</p>
+            <p className="text-xs text-zinc-500">Drag & drop allowed</p>
+          </div>
         </div>
         <input
-          id="image-upload"
+          id="studio-upload"
           type="file"
           className="hidden"
           accept="image/*"
@@ -85,73 +83,59 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onFilesSelected, compact 
     );
   }
 
+  // FULL MODE
   return (
     <label
-      htmlFor="image-upload"
+      htmlFor="studio-upload"
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
       onDrop={handleDrop}
       className={`
-        relative flex flex-col items-center justify-center w-full py-16 sm:py-20
-        rounded-3xl cursor-pointer transition-smooth overflow-hidden
+        relative flex flex-col items-center justify-center w-full min-h-[400px]
+        rounded-3xl cursor-pointer transition-all duration-500
+        border border-dashed
         ${dragActive
-          ? 'bg-red-500/10 border-red-500/50'
-          : 'glass hover:bg-white/10'
+          ? 'bg-zinc-900/80 border-purple-500/50 scale-[1.01]'
+          : 'bg-zinc-900/30 border-white/5 hover:bg-zinc-900/50 hover:border-white/10'
         }
-        border-2 border-dashed border-white/20
-        group
+        overflow-hidden group
       `}
     >
-      {/* Animated gradient background */}
-      <div className="absolute inset-0 opacity-30 pointer-events-none">
-        <div className={`absolute inset-0 bg-gradient-to-br from-red-500/20 via-transparent to-orange-500/20 transition-opacity duration-500 ${dragActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}`}></div>
-      </div>
+      {/* Animated Glow */}
+      <div className={`absolute inset-0 bg-gradient-to-tr from-purple-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none ${dragActive ? 'opacity-100' : ''}`}></div>
 
-      <div className="relative z-10 flex flex-col items-center">
-        {/* Icon */}
+      <div className="relative z-10 flex flex-col items-center p-8 text-center max-w-sm mx-auto">
         <div className={`
-          w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-smooth
+          w-20 h-20 mb-8 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xl
           ${dragActive
-            ? 'bg-red-500 text-white scale-110'
-            : 'bg-white/10 text-slate-400 group-hover:bg-red-500/20 group-hover:text-red-400 group-hover:scale-105'
+            ? 'bg-gradient-studio scale-110'
+            : 'bg-zinc-800 text-zinc-500 group-hover:bg-zinc-700 group-hover:text-zinc-300'
           }
         `}>
           {dragActive ? (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+            <svg className="w-10 h-10 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
           ) : (
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
+            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           )}
         </div>
 
-        {/* Text */}
-        <h3 className="text-xl font-semibold text-white mb-2">
-          {dragActive ? 'Drop your photos here' : 'Upload your photos'}
+        <h3 className="text-3xl font-light text-white mb-3 tracking-tight">
+          {dragActive ? 'Drop to Upload' : 'Start Creating'}
         </h3>
-        <p className="text-slate-400 mb-6 text-center">
-          {dragActive ? 'Release to start processing' : 'Drag and drop or click to browse'}
+
+        <p className="text-zinc-400 mb-8 leading-relaxed">
+          Upload your high-resolution photos for <br /> AI-powered metadata generation.
         </p>
 
-        {/* Button */}
-        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg shadow-red-500/25 group-hover:shadow-red-500/40 transition-smooth">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          <span>Choose Photos</span>
-        </div>
-
-        {/* Supported formats */}
-        <p className="text-xs text-slate-500 mt-6">
-          Supports JPEG, PNG, WEBP • Multiple files
-        </p>
+        <span className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Browse Files
+        </span>
       </div>
 
       <input
-        id="image-upload"
+        id="studio-upload"
         type="file"
         className="hidden"
         accept="image/*"
