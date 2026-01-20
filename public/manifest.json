@@ -1,0 +1,31 @@
+{
+    "name": "Amlo Metadata",
+    "short_name": "AmloMeta",
+    "description": "AI-powered Shutterstock metadata generator",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f8fafc",
+    "theme_color": "#dc2626",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "productivity",
+        "utilities",
+        "photo"
+    ],
+    "screenshots": [],
+    "prefer_related_applications": false
+}
