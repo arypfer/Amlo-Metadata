@@ -68,12 +68,8 @@ const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: s
 
 export const generateMetadata = async (imageFile: File): Promise<ShutterstockMetadata> => {
   try {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      throw new Error("API Key is missing. Please set API_KEY in your environment variables.");
-    }
-
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+    // Initialize with the clean API_KEY directly as per guidelines
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Prepare image
     const imagePart = await fileToGenerativePart(imageFile);
