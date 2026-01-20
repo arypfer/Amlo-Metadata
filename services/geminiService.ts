@@ -1,40 +1,86 @@
 import { ShutterstockMetadata } from "../types";
 
-// Convert file to base64
-const fileToBase64 = (file: File): Promise<string> => {
+// Helper: Resize and compress image
+const optimizeImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Data = reader.result as string;
-      const base64Content = base64Data.split(",")[1];
-      resolve(base64Content);
-    };
-    reader.onerror = reject;
     reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        // Calculate new dimensions (max 1536px works well for Gemini)
+        const MAX_SIZE = 1536;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compress to JPEG at 80% quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const base64Content = dataUrl.split(',')[1];
+        resolve(base64Content);
+      };
+      img.onerror = (err) => reject(new Error("Failed to load image for optimization"));
+    };
+    reader.onerror = (err) => reject(new Error("Failed to read file"));
   });
 };
 
-// Determine API base URL (works for both local dev and production)
-const getApiBaseUrl = (): string => {
-  // In production (Vercel), use relative path
-  // In development, use the Vite proxy or direct API
-  return "";
+// Retry logic wrapper
+const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, delay = 1000): Promise<Response> => {
+  try {
+    const response = await fetch(url, options);
+    // If rate limited (504, 503, 429), throw to retry
+    if (!response.ok && [503, 504, 429].includes(response.status) && retries > 0) {
+      throw new Error(`Retrying due to status ${response.status}`);
+    }
+    return response;
+  } catch (error) {
+    if (retries === 0) throw error;
+    console.log(`Retrying... attempts left: ${retries}`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return fetchWithRetry(url, options, retries - 1, delay * 2);
+  }
 };
 
 export const generateMetadata = async (imageFile: File): Promise<ShutterstockMetadata> => {
   try {
-    const imageData = await fileToBase64(imageFile);
-    const mimeType = imageFile.type;
+    // 1. Optimize image (Resize & Compress)
+    // This fixes payload limit issues on Vercel (4.5MB limit)
+    console.log("Optimizing image...", imageFile.name);
+    const imageData = await optimizeImage(imageFile);
 
-    const baseUrl = getApiBaseUrl();
-    const response = await fetch(`${baseUrl}/api/generate-metadata`, {
+    // 2. Call API with Retry Logic
+    // This handles network flakes or cold starts
+    const response = await fetchWithRetry("/api/generate-metadata", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         imageData,
-        mimeType,
+        mimeType: "image/jpeg", // We always convert to JPEG
       }),
     });
 
@@ -47,6 +93,10 @@ export const generateMetadata = async (imageFile: File): Promise<ShutterstockMet
     return data;
   } catch (error) {
     console.error("Error generating metadata:", error);
+    // Friendly error message for user
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    if (msg.includes("413")) throw new Error("Image too large. Please use a smaller file.");
+    if (msg.includes("504")) throw new Error("Analysis timed out. Please try again.");
     throw error;
   }
 };
