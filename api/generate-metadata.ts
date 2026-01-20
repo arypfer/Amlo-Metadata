@@ -1,3 +1,4 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Vercel Serverless Function to handle Gemini API calls securely
@@ -50,54 +51,36 @@ KEYWORDS RULES:
 - NO plurals + singular duplicates
 `;
 
-interface RequestBody {
-    imageData: string; // base64 encoded image
-    mimeType: string;
-}
-
 interface ShutterstockMetadata {
     title: string;
     description: string;
     keywords: string[];
 }
 
-export default async function handler(
-    req: { method: string; body: RequestBody },
-    res: {
-        status: (code: number) => {
-            json: (data: unknown) => void;
-            end: () => void;
-        };
-        setHeader: (key: string, value: string) => void;
-    }
-) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Handle CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
     if (req.method === "OPTIONS") {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
 
     if (req.method !== "POST") {
-        res.status(405).json({ error: "Method not allowed" });
-        return;
+        return res.status(405).json({ error: "Method not allowed" });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        res.status(500).json({ error: "API key not configured on server" });
-        return;
+        return res.status(500).json({ error: "API key not configured on server" });
     }
 
     try {
         const { imageData, mimeType } = req.body;
 
         if (!imageData || !mimeType) {
-            res.status(400).json({ error: "Missing imageData or mimeType" });
-            return;
+            return res.status(400).json({ error: "Missing imageData or mimeType" });
         }
 
         const ai = new GoogleGenAI({ apiKey });
@@ -143,15 +126,14 @@ export default async function handler(
 
         const text = response.text;
         if (!text) {
-            res.status(500).json({ error: "No response from AI" });
-            return;
+            return res.status(500).json({ error: "No response from AI" });
         }
 
         const data = JSON.parse(text) as ShutterstockMetadata;
-        res.status(200).json(data);
+        return res.status(200).json(data);
     } catch (error) {
         console.error("Error generating metadata:", error);
-        res.status(500).json({
+        return res.status(500).json({
             error: error instanceof Error ? error.message : "Failed to generate metadata",
         });
     }
