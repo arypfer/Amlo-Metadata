@@ -7,20 +7,20 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
   <!-- PWA Meta Tags -->
-  <meta name="theme-color" content="#dc2626" />
+  <meta name="theme-color" content="#0f172a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Amlo Metadata" />
+  <meta name="apple-mobile-web-app-title" content="Amlo" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
 
   <!-- SEO Meta Tags -->
   <meta name="description"
-    content="AI-powered assistant for Shutterstock contributors. Generate optimized titles, descriptions, and keywords." />
-  <meta property="og:title" content="Amlo Metadata - Stock Photo Assistant" />
+    content="AI-powered metadata generator for Shutterstock. Generate optimized titles, descriptions, and keywords instantly." />
+  <meta property="og:title" content="Amlo - AI Metadata Generator" />
   <meta property="og:description" content="Generate Shutterstock-ready metadata in seconds using AI." />
 
-  <title>Amlo Metadata</title>
+  <title>Amlo - AI Metadata Generator</title>
 
   <!-- Icons -->
   <link rel="icon" type="image/png" href="/icon-192.png" />
@@ -29,9 +29,60 @@
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json" />
 
-  <!-- Styles -->
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fef2f2',
+              100: '#fee2e2',
+              200: '#fecaca',
+              300: '#fca5a5',
+              400: '#f87171',
+              500: '#ef4444',
+              600: '#dc2626',
+              700: '#b91c1c',
+              800: '#991b1b',
+              900: '#7f1d1d',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'slide-up': 'slideUp 0.5s ease-out',
+            'pulse-slow': 'pulse 3s infinite',
+            'shimmer': 'shimmer 2s infinite',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { opacity: '0', transform: 'translateY(20px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
+            },
+          },
+        },
+      },
+    }
+  </script>
+
   <style>
     * {
       -webkit-tap-highlight-color: transparent;
@@ -39,12 +90,11 @@
     }
 
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f8fafc;
-      overscroll-behavior: none;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      min-height: 100vh;
     }
 
-    /* iOS safe area padding */
     .safe-area-top {
       padding-top: env(safe-area-inset-top);
     }
@@ -53,19 +103,62 @@
       padding-bottom: env(safe-area-inset-bottom);
     }
 
-    /* Smooth scrolling on iOS */
-    .scroll-smooth {
-      -webkit-overflow-scrolling: touch;
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Hide scrollbar but allow scroll */
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none;
+    .glass-light {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
 
-    .hide-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Shimmer effect */
+    .shimmer {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s infinite;
+    }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Glow effects */
+    .glow-red {
+      box-shadow: 0 0 60px -15px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Smooth transitions */
+    .transition-smooth {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 
@@ -81,7 +174,7 @@
     </script>
 </head>
 
-<body class="safe-area-top safe-area-bottom">
+<body class="safe-area-top safe-area-bottom antialiased">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 
@@ -89,13 +182,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((registration) => {
-            console.log('SW registered:', registration.scope);
-          })
-          .catch((error) => {
-            console.log('SW registration failed:', error);
-          });
+        navigator.serviceWorker.register('/sw.js').catch(() => { });
       });
     }
   </script>
