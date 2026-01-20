@@ -97,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { imageData, mimeType } = req.body;
+        const { imageData, mimeType, additionalInstructions } = req.body;
 
         if (!imageData || !mimeType) {
             return res.status(400).json({ error: "Missing imageData or mimeType" });
@@ -132,10 +132,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             required: ["title", "description", "keywords"],
         };
 
+        const userPrompt = additionalInstructions
+            ? `Analyze this image and generate metadata. IMPORTANT: ${additionalInstructions}`
+            : "Analyze this image and generate metadata.";
+
         const response = await ai.models.generateContent({
             model: "gemini-2.0-flash",
             contents: {
-                parts: [imagePart, { text: "Analyze this image and generate metadata." }],
+                parts: [imagePart, { text: userPrompt }],
             },
             config: {
                 systemInstruction: SYSTEM_INSTRUCTION,

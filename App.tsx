@@ -1,32 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import ImageUploader from './components/ImageUploader';
 import MetadataResult from './components/MetadataResult';
-import { AnalysisItem } from './types';
+import History from './components/History';
+import Settings from './components/Settings';
+import { AnalysisItem, AppSettings } from './types';
 import { generateMetadata } from './services/geminiService';
+import { generateCSV, downloadCSV } from './utils/csvExport';
 
 const CORRECT_PASSWORD = 'gandatisa123';
 const AUTH_STORAGE_KEY = 'amlo_auth_token_v2';
-const WIFE_NAME = "Gandatisa"; // Dedication name
+const DATA_STORAGE_KEY = 'amlo_data_v1';
+const SETTINGS_STORAGE_KEY = 'amlo_settings_v1';
+const WIFE_NAME = "Gandatisa";
 
 const createAuthToken = (password: string) => btoa(password + '_studio_auth_' + new Date().getFullYear());
 const verifyAuthToken = (token: string) => token === createAuthToken(CORRECT_PASSWORD);
 
+const DEFAULT_SETTINGS: AppSettings = {
+  customInstructions: '',
+  imgQuality: 'balanced',
+  csvHeader: true
+};
+
 const App: React.FC = () => {
   const [items, setItems] = useState<AnalysisItem[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, history, settings
 
-  // Mobile menu state
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Load Data & Auth
   useEffect(() => {
     const savedToken = localStorage.getItem(AUTH_STORAGE_KEY);
     if (savedToken && verifyAuthToken(savedToken)) setIsAuthenticated(true);
+
+    const savedData = localStorage.getItem(DATA_STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        // Hydrate Date objects if needed, or keeping timestamp number is fine
+        setItems(parsed);
+      } catch (e) {
+        console.error('Failed to load history', e);
+      }
+    }
+
+    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (savedSettings) {
+      try {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+      } catch (e) {
+        console.error('Failed to load settings', e);
+      }
+    }
+
     setIsCheckingAuth(false);
   }, []);
+
+  // Save Data on Change
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(items));
+    }
+  }, [items, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    }
+  }, [settings, isAuthenticated]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,15 +86,44 @@ const App: React.FC = () => {
   };
 
   const handleFilesSelected = (files: File[]) => {
-    const newItems = files.map(file => ({
+    const newItems: AnalysisItem[] = files.map(file => ({
       id: Math.random().toString(36).substring(2, 9),
       file,
-      previewUrl: URL.createObjectURL(file), // Note: In a real app, revoke these
-      status: 'idle' as const,
+      previewUrl: URL.createObjectURL(file),
+      status: 'idle',
       data: null,
-      error: null
+      error: null,
+      timestamp: Date.now()
     }));
+    // Add new items to the TOP
     setItems(prev => [...newItems, ...prev]);
+    setActiveTab('dashboard'); // Switch to dashboard on upload
+  };
+
+  const handleUpdateItem = (id: string, newData: any) => {
+    setItems(prev => prev.map(item =>
+      item.id === id ? { ...item, data: { ...item.data, ...newData } } : item
+    ));
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleRetryItem = (id: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, status: 'idle', error: null } : i));
+  };
+
+  const clearHistory = () => {
+    if (confirm('Are you sure you want to delete all history? This cannot be undone.')) {
+      setItems([]);
+    }
+  };
+
+  const exportCSV = () => {
+    const csv = generateCSV(items);
+    if (!csv) return alert('No completed items to export.');
+    downloadCSV(csv, `shutterstock_metadata_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   // Processing Queue
@@ -59,14 +135,14 @@ const App: React.FC = () => {
 
       setItems(prev => prev.map(i => i.id === next.id ? { ...i, status: 'analyzing' } : i));
       try {
-        const metadata = await generateMetadata(next.file);
+        const metadata = await generateMetadata(next.file, settings.customInstructions);
         setItems(prev => prev.map(i => i.id === next.id ? { ...i, status: 'success', data: metadata } : i));
       } catch (err) {
         setItems(prev => prev.map(i => i.id === next.id ? { ...i, status: 'error', error: 'AI Analysis Failed' } : i));
       }
     };
     processNext();
-  }, [items, isAuthenticated]);
+  }, [items, isAuthenticated, settings.customInstructions]);
 
   if (isCheckingAuth) return null;
 
@@ -163,15 +239,27 @@ const App: React.FC = () => {
         </button>
       </div>
 
+      {/* MOBILE MENU DROPDOWN */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-zinc-900/95 backdrop-blur-xl pt-20 px-6">
+          <nav className="space-y-4">
+            <NavButton active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }} icon="grid">Dashboard</NavButton>
+            <NavButton active={activeTab === 'history'} onClick={() => { setActiveTab('history'); setIsMobileMenuOpen(false); }} icon="clock">History</NavButton>
+            <NavButton active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }} icon="settings">Settings</NavButton>
+          </nav>
+        </div>
+      )}
+
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative pt-16 md:pt-0">
         {/* Top Bar (Desktop) */}
         <header className="hidden md:flex items-center justify-between h-16 px-8 border-b border-white/5 bg-zinc-900/20">
           <h2 className="text-lg font-medium text-zinc-200 capitalize">{activeTab}</h2>
           <div className="flex items-center gap-4">
-            {items.length > 0 && (
-              <button onClick={() => setItems([])} className="text-xs font-medium text-zinc-500 hover:text-red-400 transition-colors">
-                Clear Session
+            {activeTab === 'history' && (
+              <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-medium text-zinc-200 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0L8 8m4-4v12" /></svg>
+                Export CSV
               </button>
             )}
           </div>
@@ -181,46 +269,53 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
           <div className="max-w-5xl mx-auto space-y-8">
 
-            {/* Welcome / Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Session Uploads" value={items.length} />
-              <StatCard label="Completed" value={items.filter(i => i.status === 'success').length} highlight />
-            </div>
-
-            {/* Upload Area */}
-            <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-1">
-              <ImageUploader onFilesSelected={handleFilesSelected} compact={items.length > 0} />
-            </div>
-
-            {/* Results Grid */}
-            {items.length > 0 && (
-              <div className="grid gap-6">
-                {items.map(item => (
-                  <MetadataResult
-                    key={item.id}
-                    item={item}
-                    onRemove={id => setItems(p => p.filter(x => x.id !== id))}
-                    onRetry={id => setItems(p => p.map(x => x.id === id ? { ...x, status: 'idle', error: null } : x))}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Empty State */}
-            {items.length === 0 && (
-              <div className="py-20 text-center opacity-50">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {/* TAB: DASHBOARD */}
+            {activeTab === 'dashboard' && (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard label="Total Uploads" value={items.length} />
+                  <StatCard label="Completed" value={items.filter(i => i.status === 'success').length} highlight />
                 </div>
-                <p className="text-zinc-500">Ready for your masterpiece</p>
-              </div>
-            )}
-          </div>
 
-          {/* Footer */}
-          <footer className="mt-20 py-8 text-center border-t border-white/5">
-            <p className="text-zinc-600 text-sm">Made with ❤️ for {WIFE_NAME}</p>
-          </footer>
+                {/* Upload */}
+                <div className="bg-zinc-900/30 border border-white/5 rounded-3xl p-1">
+                  <ImageUploader onFilesSelected={handleFilesSelected} compact={items.filter(i => i.status !== 'success').length > 0} />
+                </div>
+
+                {/* Active Results (Pending/Processing or recent) */}
+                {items.length > 0 && (
+                  <div className="grid gap-6">
+                    {items.map(item => (
+                      <MetadataResult
+                        key={item.id}
+                        item={item}
+                        onRemove={handleRemoveItem}
+                        onRetry={handleRetryItem}
+                        onUpdate={handleUpdateItem}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* TAB: HISTORY */}
+            {activeTab === 'history' && (
+              <History
+                items={items}
+                onRemove={handleRemoveItem}
+                onUpdate={handleUpdateItem}
+                onClearHistory={clearHistory}
+              />
+            )}
+
+            {/* TAB: SETTINGS */}
+            {activeTab === 'settings' && (
+              <Settings settings={settings} onSave={setSettings} />
+            )}
+
+          </div>
         </div>
       </main>
     </div>
@@ -233,7 +328,6 @@ const NavButton = ({ active, onClick, icon, children }: any) => (
     onClick={onClick}
     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${active ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}
   >
-    {/* Icons (simplified) */}
     <span className={`w-5 h-5 ${active ? 'text-purple-400' : 'opacity-70'}`}>
       {icon === 'grid' && <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
       {icon === 'clock' && <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}

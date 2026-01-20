@@ -39,7 +39,7 @@ const optimizeImage = (file: File): Promise<string> => {
         ctx.drawImage(img, 0, 0, width, height);
 
         // Compress to JPEG at 80% quality
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85); // Slightly higher for better AI perception
         const base64Content = dataUrl.split(',')[1];
         resolve(base64Content);
       };
@@ -66,21 +66,20 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, de
   }
 };
 
-export const generateMetadata = async (imageFile: File): Promise<ShutterstockMetadata> => {
+export const generateMetadata = async (imageFile: File, additionalInstructions?: string): Promise<ShutterstockMetadata> => {
   try {
     // 1. Optimize image (Resize & Compress)
-    // This fixes payload limit issues on Vercel (4.5MB limit)
     console.log("Optimizing image...", imageFile.name);
     const imageData = await optimizeImage(imageFile);
 
     // 2. Call API with Retry Logic
-    // This handles network flakes or cold starts
     const response = await fetchWithRetry("/api/generate-metadata", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         imageData,
-        mimeType: "image/jpeg", // We always convert to JPEG
+        mimeType: "image/jpeg",
+        additionalInstructions: additionalInstructions || undefined // Pass custom rules
       }),
     });
 
@@ -93,7 +92,6 @@ export const generateMetadata = async (imageFile: File): Promise<ShutterstockMet
     return data;
   } catch (error) {
     console.error("Error generating metadata:", error);
-    // Friendly error message for user
     const msg = error instanceof Error ? error.message : "Unknown error";
     if (msg.includes("413")) throw new Error("Image too large. Please use a smaller file.");
     if (msg.includes("504")) throw new Error("Analysis timed out. Please try again.");

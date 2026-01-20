@@ -11,4 +11,11 @@ export interface AnalysisItem {
   status: 'idle' | 'analyzing' | 'success' | 'error';
   data: ShutterstockMetadata | null;
   error: string | null;
+  timestamp?: number; // Added for history
+}
+
+export interface AppSettings {
+  customInstructions: string;
+  imgQuality: 'balanced' | 'high';
+  csvHeader: boolean;
 }
