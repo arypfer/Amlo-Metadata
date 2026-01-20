@@ -1,119 +1,50 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { ShutterstockMetadata } from "../types";
 
-const SYSTEM_INSTRUCTION = `
-You are a professional Shutterstock contributor assistant.
-
-Your task:
-Analyze the given image and generate Shutterstock-ready metadata.
-
-RULES (VERY IMPORTANT):
-- NO brand names
-- NO copyrighted characters
-- NO trademarks
-- NO location guessing unless clearly visible
-- NO camera or technical metadata
-- Commercial-safe wording
-- Neutral, descriptive, searchable language
-- Avoid repetition
-- Use simple English
-- Focus on concepts buyers search for
-
-OUTPUT FORMAT (STRICT JSON):
-{
-  "title": "",
-  "description": "",
-  "keywords": []
-}
-
-TITLE RULES:
-- Max 200 characters
-- Clear and factual
-- No marketing language
-- Capitalize first letter only
-
-DESCRIPTION RULES:
-- 2–3 sentences
-- Explain what is visible
-- Mention concepts (business, lifestyle, technology, emotion, etc.)
-- Neutral, stock-photo style
-
-KEYWORDS RULES:
-- 40–50 keywords
-- Comma separated (in the JSON array)
-- Single words or short phrases
-- Most important keywords first
-- Include: Subject, Action, Concept, Emotion, Usage context
-- Do NOT repeat same word excessively
-- NO plurals + singular duplicates
-`;
-
-const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: string; mimeType: string } }> => {
+// Convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64Data = reader.result as string;
-      const base64Content = base64Data.split(',')[1];
-      resolve({
-        inlineData: {
-          data: base64Content,
-          mimeType: file.type,
-        },
-      });
+      const base64Content = base64Data.split(",")[1];
+      resolve(base64Content);
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 };
 
+// Determine API base URL (works for both local dev and production)
+const getApiBaseUrl = (): string => {
+  // In production (Vercel), use relative path
+  // In development, use the Vite proxy or direct API
+  return "";
+};
+
 export const generateMetadata = async (imageFile: File): Promise<ShutterstockMetadata> => {
   try {
-    // Strictly use process.env.API_KEY as per guidelines.
-    // In compatible environments, this is injected automatically.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-    
-    // Prepare image
-    const imagePart = await fileToGenerativePart(imageFile);
+    const imageData = await fileToBase64(imageFile);
+    const mimeType = imageFile.type;
 
-    // Prepare Schema
-    const responseSchema = {
-      type: Type.OBJECT,
-      properties: {
-        title: {
-          type: Type.STRING,
-          description: "A clear, factual title max 200 chars. Capitalize first letter only."
-        },
-        description: {
-          type: Type.STRING,
-          description: "2-3 sentences explaining visual content and concepts. Neutral style."
-        },
-        keywords: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
-          description: "40-50 keywords, most important first, no brands/trademarks."
-        }
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/generate-metadata`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      required: ["title", "description", "keywords"],
-    };
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [imagePart, { text: "Analyze this image and generate metadata." }]
-      },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: responseSchema,
-      }
+      body: JSON.stringify({
+        imageData,
+        mimeType,
+      }),
     });
 
-    const text = response.text;
-    if (!text) throw new Error("No response from AI");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
 
-    const data = JSON.parse(text) as ShutterstockMetadata;
+    const data = (await response.json()) as ShutterstockMetadata;
     return data;
-
   } catch (error) {
     console.error("Error generating metadata:", error);
     throw error;
