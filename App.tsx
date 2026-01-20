@@ -65,9 +65,10 @@ const App: React.FC = () => {
           ));
         } catch (error) {
           console.error("Processing error", error);
+          const errorMessage = error instanceof Error ? error.message : "Failed to generate metadata.";
           // Update error
           setItems(prev => prev.map(i => 
-            i.id === idleItem.id ? { ...i, status: 'error', error: "Failed to generate metadata." } : i
+            i.id === idleItem.id ? { ...i, status: 'error', error: errorMessage } : i
           ));
         }
       }
