@@ -1,7 +1,6 @@
 const CACHE_NAME = 'amlo-metadata-v1';
 const urlsToCache = [
     '/',
-    '/index.html',
     '/manifest.json',
     '/icon-192.png',
     '/icon-512.png'
@@ -12,6 +11,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => cache.addAll(urlsToCache))
+            .catch((err) => console.log('Cache install error:', err))
     );
     self.skipWaiting();
 });
@@ -34,8 +34,20 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+
+    // Skip non-http(s) schemes (chrome-extension, etc.)
+    if (!url.protocol.startsWith('http')) {
+        return;
+    }
+
     // Skip API calls - always go to network
-    if (event.request.url.includes('/api/')) {
+    if (url.pathname.startsWith('/api/')) {
+        return;
+    }
+
+    // Skip external resources (CDNs, etc.)
+    if (url.origin !== self.location.origin) {
         return;
     }
 
@@ -45,16 +57,23 @@ self.addEventListener('fetch', (event) => {
                 if (response) {
                     return response;
                 }
-                return fetch(event.request).then((networkResponse) => {
-                    // Cache successful responses
-                    if (networkResponse && networkResponse.status === 200) {
-                        const responseClone = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, responseClone);
-                        });
-                    }
-                    return networkResponse;
-                });
+                return fetch(event.request)
+                    .then((networkResponse) => {
+                        // Only cache successful same-origin responses
+                        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                            const responseClone = networkResponse.clone();
+                            caches.open(CACHE_NAME)
+                                .then((cache) => {
+                                    cache.put(event.request, responseClone);
+                                })
+                                .catch(() => { });
+                        }
+                        return networkResponse;
+                    })
+                    .catch(() => {
+                        // Return offline fallback if available
+                        return caches.match('/');
+                    });
             })
     );
 });
