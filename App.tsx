@@ -4,8 +4,51 @@ import MetadataResult from './components/MetadataResult';
 import { AnalysisItem } from './types';
 import { generateMetadata } from './services/geminiService';
 
+// Declare global AIStudio interface to ensure types are correct
+// We augment the existing AIStudio interface which is referenced by window.aistudio
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+}
+
 const App: React.FC = () => {
   const [items, setItems] = useState<AnalysisItem[]>([]);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [isCheckingKey, setIsCheckingKey] = useState(true);
+
+  // Check for API Key availability on mount
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio) {
+        try {
+          const selected = await window.aistudio.hasSelectedApiKey();
+          setHasApiKey(selected);
+        } catch (e) {
+          console.error("Error checking API key:", e);
+          setHasApiKey(false);
+        }
+      } else {
+        // If not in AI Studio, assume env var is set or handled elsewhere
+        setHasApiKey(true);
+      }
+      setIsCheckingKey(false);
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      try {
+        await window.aistudio.openSelectKey();
+        // Assume success to mitigate race condition
+        setHasApiKey(true);
+      } catch (e) {
+        console.error("Error selecting API key:", e);
+      }
+    }
+  };
 
   // Function to add new files to the queue
   const handleFilesSelected = (files: File[]) => {
@@ -45,6 +88,8 @@ const App: React.FC = () => {
 
   // Queue Processing Logic
   useEffect(() => {
+    if (!hasApiKey) return;
+
     const processQueue = async () => {
       // Find items that need processing (idle)
       const idleItem = items.find(item => item.status === 'idle');
@@ -75,7 +120,44 @@ const App: React.FC = () => {
     };
 
     processQueue();
-  }, [items]); // Re-run whenever items change state
+  }, [items, hasApiKey]); // Re-run whenever items change state
+
+  // Loading state while checking for key
+  if (isCheckingKey) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  // API Key Selection Screen
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center space-y-6">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-3xl">
+            🔑
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-slate-900">API Key Required</h1>
+            <p className="text-slate-600">
+              To use Amlo Metadata, you need to select a Google Cloud Project with billing enabled.
+            </p>
+          </div>
+          <button
+            onClick={handleSelectKey}
+            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-indigo-200"
+          >
+            Select API Key
+          </button>
+          <p className="text-xs text-slate-400">
+            Learn more about billing at <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-indigo-600">ai.google.dev/gemini-api/docs/billing</a>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
@@ -101,7 +183,7 @@ const App: React.FC = () => {
                </button>
              )}
              <div className="text-[10px] sm:text-xs font-medium text-slate-500 bg-slate-100 px-2 sm:px-3 py-1 rounded-full">
-               Gemini 2.5
+               Gemini 3 Flash
              </div>
           </div>
         </div>
