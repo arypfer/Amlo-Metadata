@@ -156,10 +156,8 @@ const App: React.FC = () => {
 
         <div className="relative w-full max-w-sm glass-panel p-10 rounded-3xl backdrop-blur-3xl shadow-2xl">
           <div className="text-center mb-10">
-            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-studio rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
+            <div className="w-24 h-24 mx-auto mb-6 relative flex items-center justify-center">
+              <img src="/logo.png" alt="Amlo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]" />
             </div>
             <h1 className="text-3xl font-light tracking-tight mb-2">Amlo Studio</h1>
             <p className="text-zinc-500 text-sm">Professional Metadata Suite</p>
@@ -185,7 +183,7 @@ const App: React.FC = () => {
           </form>
 
           <div className="mt-10 text-center">
-            <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Designed for {WIFE_NAME}</p>
+            <p className="text-[10px] text-zinc-600 uppercase tracking-widest">Made for my loved wife</p>
           </div>
         </div>
       </div>
@@ -200,9 +198,7 @@ const App: React.FC = () => {
       <aside className="hidden md:flex w-64 flex-col border-r border-white/5 bg-zinc-900/30 backdrop-blur-xl">
         <div className="p-6">
           <div className="flex items-center gap-3 text-white">
-            <div className="w-8 h-8 rounded-lg bg-gradient-studio flex items-center justify-center">
-              <span className="font-bold text-sm">A</span>
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]" />
             <span className="font-medium text-lg tracking-tight">Amlo Studio</span>
           </div>
         </div>
@@ -231,7 +227,7 @@ const App: React.FC = () => {
       {/* MOBILE HEADER */}
       <div className="md:hidden fixed top-0 w-full z-50 glass-nav h-16 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-studio flex items-center justify-center text-white text-xs font-bold">A</div>
+          <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain" />
           <span className="font-medium text-white">Amlo Studio</span>
         </div>
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-zinc-400">
@@ -314,6 +310,11 @@ const App: React.FC = () => {
             {activeTab === 'settings' && (
               <Settings settings={settings} onSave={setSettings} />
             )}
+
+            {/* Footer */}
+            <footer className="mt-20 py-8 text-center border-t border-white/5">
+              <p className="text-zinc-600 text-sm">Made with ❤️ for my loved wife</p>
+            </footer>
 
           </div>
         </div>
